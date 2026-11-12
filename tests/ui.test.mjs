@@ -87,13 +87,35 @@ test("UI completes both manual walkthroughs, preserves sorting, imports UNSAT, a
     click("theme-btn");
     assert.equal(w.document.documentElement.dataset.theme, "light");
     assert.equal(w.localStorage.getItem("pnp-theme"), "light");
-    assert.equal($("theme-btn").getAttribute("aria-label"), "Switch to dark mode");
+    assert.equal(
+      $("theme-btn").getAttribute("aria-label"),
+      "Switch to dark mode",
+    );
     assert.equal(JSON.stringify(view().step), snapshot);
     assert.equal($("fabric-btn").getAttribute("aria-checked"), "false");
     click("fabric-btn");
     assert.equal($("fabric-btn").getAttribute("aria-checked"), "true");
     assert.equal(JSON.stringify(view().step), snapshot);
     assert.ok($("fabric-description").textContent.includes("stretch"));
+    assert.equal($("lift-btn").hidden, false);
+    click("lift-btn");
+    assert.equal($("lift-btn").getAttribute("aria-pressed"), "true");
+    assert.equal(JSON.stringify(view().step), snapshot);
+    for (const layer of [
+      "nodes",
+      "labels",
+      "fills",
+      "rule",
+      "same",
+      "contradictions",
+    ]) {
+      const button = w.document.querySelector(`[data-layer="${layer}"]`);
+      button.click();
+      assert.equal(button.getAttribute("aria-pressed"), "false");
+      assert.equal(JSON.stringify(view().step), snapshot);
+      button.click();
+      assert.equal(button.getAttribute("aria-pressed"), "true");
+    }
     click("theme-btn");
     assert.equal(w.document.documentElement.dataset.theme, "dark");
     assert.equal(w.localStorage.getItem("pnp-theme"), "dark");
@@ -163,10 +185,11 @@ test("UI completes both manual walkthroughs, preserves sorting, imports UNSAT, a
     const payload = JSON.parse(atob(clipboard.at(-1).split("#p=")[1]));
     assert.deepEqual(payload.values, view().values);
     assert.equal(payload.rules.length, 1);
-    assert.equal($("network-summary").textContent, "3 conditions · 1 network");
+    assert.equal($("network-summary").textContent, "3 conditions · 1 rule");
     assert.equal($("fabric-btn").getAttribute("aria-checked"), "true");
     click("fabric-btn");
     assert.equal($("fabric-btn").getAttribute("aria-checked"), "false");
+    assert.equal($("lift-btn").hidden, true);
     click("physics-btn");
     assert.equal($("physics-btn").getAttribute("aria-pressed"), "false");
     click("physics-btn");

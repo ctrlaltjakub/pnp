@@ -919,6 +919,7 @@ h2 {
 }
 .network-layout {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   padding: 0 22px 10px;
@@ -955,6 +956,52 @@ h2 {
   color: var(--muted);
   font-size: 10px;
   line-height: 1.5;
+}
+.network-layers {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 0 22px;
+}
+.layers-label {
+  font: 9px var(--mono);
+  color: var(--muted);
+  margin-right: 4px;
+}
+.layer-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--stroke-strong, #b5b9a5);
+  border-radius: 6px;
+  background: var(--positive-surface, #f1f4e8);
+  color: var(--ink);
+  font-size: 10px;
+}
+.layer-button[aria-pressed="false"] {
+  background: var(--paper);
+  color: var(--muted);
+  border-color: var(--line);
+  border-style: dashed;
+}
+.layer-button[aria-pressed="false"] .line-key {
+  opacity: 0.4;
+}
+.layer-button:hover {
+  border-color: var(--accent);
+}
+.lift-button {
+  margin-left: auto;
+}
+.network-explanation {
+  padding: 0 22px;
+  margin: 9px 0 13px;
+  font-size: 9px;
+  color: var(--muted);
 }
 .network-viewport {
   position: relative;
@@ -1035,6 +1082,7 @@ h2 {
 }
 .network-foot {
   justify-content: flex-start;
+  flex-wrap: wrap;
   gap: 18px;
 }
 .network-foot > span {
@@ -1056,6 +1104,12 @@ h2 {
 }
 .identical-line {
   border-top: 1.5px dashed var(--literal-legend, #7f8870);
+}
+.contradiction-line {
+  border-top: 2px dotted #c53d45;
+}
+:root[data-theme="dark"] .contradiction-line {
+  border-color: #f4777b;
 }
 .node-tooltip {
   position: absolute;

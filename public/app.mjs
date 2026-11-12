@@ -82,6 +82,33 @@ $("theme-btn").addEventListener("click", () =>
     true,
   ),
 );
+const layerButtons = [...document.querySelectorAll("[data-layer]")];
+function updateLayerControls() {
+  for (const button of layerButtons) {
+    const visible = network.layers[button.dataset.layer];
+    button.setAttribute("aria-pressed", String(visible));
+    button.title = `${visible ? "Hide" : "Show"} ${button.textContent.trim().toLowerCase()}`;
+  }
+}
+try {
+  const saved = JSON.parse(localStorage.getItem("pnp-network-layers:v1"));
+  if (saved && typeof saved === "object")
+    for (const key of Object.keys(network.layers))
+      if (typeof saved[key] === "boolean") network.setLayer(key, saved[key]);
+} catch {}
+updateLayerControls();
+for (const button of layerButtons)
+  button.addEventListener("click", () => {
+    const key = button.dataset.layer;
+    network.setLayer(key, !network.layers[key]);
+    updateLayerControls();
+    try {
+      localStorage.setItem(
+        "pnp-network-layers:v1",
+        JSON.stringify(network.layers),
+      );
+    } catch {}
+  });
 // Public panel API: subscribe to the same displayed assignment as existing panels.
 // No hidden generator assignment is stored or exposed anywhere.
 window.pnp = Object.freeze({
@@ -278,7 +305,7 @@ function render(view, kind) {
     tableContainer.scrollTop = 0;
     network.setProblem(view.problem.n, view.problem.rules);
     $("network-summary").textContent =
-      `${view.problem.rules.length * 3} conditions · ${network.components} ${network.components === 1 ? "network" : "networks"}`;
+      `${view.problem.rules.length * 3} conditions · ${view.problem.rules.length} ${view.problem.rules.length === 1 ? "rule" : "rules"}`;
     $("node-tooltip").hidden = true;
   }
   if (["problem", "initial", "order"].includes(kind)) {
@@ -462,6 +489,11 @@ $("physics-btn").addEventListener("click", () => {
   updateFabricControls();
 });
 function updateFabricControls() {
+  $("lift-btn").hidden = !network.fabric;
+  $("lift-btn").setAttribute("aria-pressed", String(network.liftMatches));
+  $("lift-btn").title = network.liftMatches
+    ? "Lower matching conditions back onto the sheet"
+    : "Raise matching conditions above the sheet";
   $("fabric-btn").setAttribute("aria-checked", String(network.fabric));
   $("fabric-description").textContent = network.fabric
     ? network.running
@@ -469,7 +501,9 @@ function updateFabricControls() {
       : "Physics paused. Drag to reshape."
     : "Spread into a flexible sheet";
   $("network-mode-label").textContent = network.fabric
-    ? "Fabric · elastic sheet"
+    ? network.liftMatches
+      ? "Fabric · matches raised"
+      : "Fabric · elastic sheet"
     : "3D · touch to explore";
 }
 $("fabric-btn").addEventListener("click", () => {
@@ -477,6 +511,10 @@ $("fabric-btn").addEventListener("click", () => {
   updateFabricControls();
 });
 $("zoom-in").addEventListener("click", () => network.changeZoom(1.2));
+$("lift-btn").addEventListener("click", () => {
+  network.setLiftMatches(!network.liftMatches);
+  updateFabricControls();
+});
 $("zoom-out").addEventListener("click", () => network.changeZoom(1 / 1.2));
 $("fit-btn").addEventListener("click", () => network.fit());
 

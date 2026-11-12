@@ -5,6 +5,7 @@ export const ruleColor = (i) =>
 const palettes = {
   light: {
     same: "#7f8870",
+    contradiction: "#c53d45",
     selected: "#a58c4f",
     shadow: "#55604410",
     unknown: "#eeeee5",
@@ -19,6 +20,7 @@ const palettes = {
   },
   dark: {
     same: "#b4bfa3",
+    contradiction: "#f4777b",
     selected: "#e4c780",
     shadow: "#00000030",
     unknown: "#2b322e",
@@ -43,7 +45,17 @@ export class ConditionNetwork {
     this.nodes = [];
     this.edges = [];
     this.triangles = [];
+    this.contradictionGroups = [];
+    this.layers = {
+      nodes: true,
+      labels: true,
+      rule: true,
+      same: true,
+      contradictions: true,
+      fills: true,
+    };
     this.values = [];
+    this.heightAssignment = [];
     this.activeRule = null;
     this.activeLiteral = null;
     this.rotation = { x: -0.16, y: 0.2 };
@@ -52,6 +64,7 @@ export class ConditionNetwork {
     this.baseScale = 1;
     this.running = !matchMedia("(prefers-reduced-motion: reduce)").matches;
     this.fabric = false;
+    this.liftMatches = false;
     this.theme = "dark";
     this.palette = palettes.dark;
     this.pointers = new Map();
@@ -117,6 +130,8 @@ export class ConditionNetwork {
     const restoreFabric = this.fabric;
     this.fabric = false;
     this.rules = rules;
+    this.values = [];
+    this.heightAssignment = [];
     this.nodes = [];
     this.edges = [];
     this.triangles = [];
@@ -218,6 +233,18 @@ export class ConditionNetwork {
           strength: 0.0035,
           kind: "same",
         });
+    // Store opposite polarities as groups, not a quadratic array of edges.
+    // These are visual relationships only; they do not add physical springs.
+    this.contradictionGroups = [];
+    this.contradictionCount = 0;
+    for (const on of same.values()) {
+      if (!on[0].l.on) continue;
+      const off = same.get(conditionKey({ v: on[0].l.v, on: false }));
+      if (off) {
+        this.contradictionGroups.push({ on, off });
+        this.contradictionCount += on.length * off.length;
+      }
+    }
     this.prepareFabric([...groups.values()]);
     this.energy = 1;
     this.rotation = { x: -0.16, y: 0.2 };
@@ -280,6 +307,7 @@ export class ConditionNetwork {
         Object.assign(p, p.fabricHome, { vx: 0, vy: 0, vz: 0 });
       }
       this.fit();
+      this.syncFabricHeights(true);
     } else {
       for (const p of this.nodes) Object.assign(p, p.spacePose);
       if (this.spaceCamera) Object.assign(this, this.spaceCamera);
@@ -288,14 +316,56 @@ export class ConditionNetwork {
     this.draw();
   }
   update({ values, rule = null, literal = null, variable = null }) {
+    const heightsChanged =
+      values.length !== this.heightAssignment.length ||
+      values.some((value, i) => value !== this.heightAssignment[i]);
+    this.heightAssignment = [...values];
     this.values = values;
     this.activeRule = rule;
     this.activeLiteral = literal;
     this.activeVariable = variable;
+    if (heightsChanged && this.liftMatches) this.syncFabricHeights();
+  }
+  fabricHeight(node) {
+    return this.fabric &&
+      this.liftMatches &&
+      this.values[node.l.v] === node.l.on
+      ? 80
+      : 0;
+  }
+  syncFabricHeights(snap = false) {
+    if (!this.fabric || (!snap && this.running)) return;
+    for (const p of this.nodes) {
+      p.z = this.fabricHeight(p);
+      p.vz = 0;
+    }
+  }
+  setLiftMatches(enabled) {
+    if (this.liftMatches === enabled) return;
+    this.liftMatches = enabled;
+    if (this.fabric) {
+      if (enabled) {
+        this.flatRotation = { ...this.rotation };
+        this.rotation = { x: 0.6, y: -0.2 };
+      } else this.rotation = { ...(this.flatRotation || { x: -0.12, y: 0 }) };
+      this.syncFabricHeights();
+      this.energy = 1;
+    }
+    this.draw();
   }
   setTheme(theme) {
     this.theme = theme === "light" ? "light" : "dark";
     this.palette = palettes[this.theme];
+    this.draw();
+  }
+  setLayer(layer, visible) {
+    if (!Object.hasOwn(this.layers, layer)) return;
+    this.layers[layer] = !!visible;
+    if (layer === "nodes" && !visible) {
+      this.drag = null;
+      this.inspect(null);
+      this.canvas.style.cursor = "grab";
+    }
     this.draw();
   }
   resize() {
@@ -318,7 +388,11 @@ export class ConditionNetwork {
     );
   }
   fit() {
-    this.rotation = this.fabric ? { x: -0.12, y: 0 } : { x: -0.16, y: 0.2 };
+    this.rotation = this.fabric
+      ? this.liftMatches
+        ? { x: 0.6, y: -0.2 }
+        : { x: -0.12, y: 0 }
+      : { x: -0.16, y: 0.2 };
     this.pan = { x: 0, y: 0 };
     this.zoom = 1;
     this.computeScale();
@@ -347,7 +421,9 @@ export class ConditionNetwork {
       const tension = this.fabric ? 0.0018 : 0.0006;
       let fx = (anchor.x - p.x) * tension,
         fy = (anchor.y - p.y) * tension,
-        fz = this.fabric ? -p.z * 0.018 : (anchor.z - p.z) * 0.0006;
+        fz = this.fabric
+          ? (this.fabricHeight(p) - p.z) * 0.018
+          : (anchor.z - p.z) * 0.0006;
       const x = Math.floor(p.x / cell),
         y = Math.floor(p.y / cell),
         z = Math.floor(p.z / cell);
@@ -384,7 +460,12 @@ export class ConditionNetwork {
         y = e.b.y - e.a.y,
         z = e.b.z - e.a.z;
       const d = Math.max(1, Math.hypot(x, y, z));
-      const length = this.fabric ? e.fabricLength : e.length;
+      const heightDelta = this.fabric
+        ? this.fabricHeight(e.b) - this.fabricHeight(e.a)
+        : 0;
+      const length = this.fabric
+        ? Math.hypot(e.fabricLength, heightDelta)
+        : e.length;
       const strength = this.fabric
         ? e.kind === "rule"
           ? 0.03
@@ -394,7 +475,7 @@ export class ConditionNetwork {
       x *= f;
       y *= f;
       // Neighbor coupling spreads out-of-plane pulls through the sheet.
-      z *= f + (this.fabric ? 0.012 * dt : 0);
+      z = z * f + (this.fabric ? (z - heightDelta) * 0.012 * dt : 0);
       if (this.drag?.node !== e.a) {
         e.a.vx += x;
         e.a.vy += y;
@@ -455,20 +536,52 @@ export class ConditionNetwork {
     for (const p of this.nodes) p.screen = this.project(p);
     const fadeFor = (p) =>
       this.activeLiteral && p.key !== this.activeLiteral ? 0.2 : 1;
-    for (const t of this.triangles) {
-      const active = this.activeRule === t.rule;
-      ctx.beginPath();
-      t.nodes.forEach((p, i) =>
-        i
-          ? ctx.lineTo(p.screen.x, p.screen.y)
-          : ctx.moveTo(p.screen.x, p.screen.y),
-      );
-      ctx.closePath();
-      ctx.fillStyle = t.color;
-      ctx.globalAlpha = active ? 0.15 : 0.035;
-      ctx.fill();
+    if (this.layers.fills)
+      for (const t of this.triangles) {
+        const active = this.activeRule === t.rule;
+        ctx.beginPath();
+        t.nodes.forEach((p, i) =>
+          i
+            ? ctx.lineTo(p.screen.x, p.screen.y)
+            : ctx.moveTo(p.screen.x, p.screen.y),
+        );
+        ctx.closePath();
+        ctx.fillStyle = t.color;
+        ctx.globalAlpha = active ? 0.15 : 0.035;
+        ctx.fill();
+      }
+    if (this.layers.contradictions) {
+      ctx.strokeStyle = colors.contradiction;
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = "round";
+      ctx.setLineDash([1, 5]);
+      for (const group of this.contradictionGroups) {
+        const focused =
+          !this.activeLiteral ||
+          group.on[0].key === this.activeLiteral ||
+          group.off[0].key === this.activeLiteral;
+        ctx.globalAlpha = focused ? 0.8 : 0.16;
+        ctx.beginPath();
+        for (const on of group.on)
+          for (const off of group.off) {
+            const a = on.screen,
+              b = off.screen;
+            if (
+              (a.x < 0 && b.x < 0) ||
+              (a.x > this.width && b.x > this.width) ||
+              (a.y < 0 && b.y < 0) ||
+              (a.y > this.height && b.y > this.height)
+            )
+              continue;
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+          }
+        ctx.stroke();
+      }
+      ctx.lineCap = "butt";
     }
     for (const e of this.edges) {
+      if (!this.layers[e.kind]) continue;
       const a = e.a.screen,
         b = e.b.screen;
       const active = this.activeRule === e.a.rule && e.kind === "rule";
@@ -485,7 +598,7 @@ export class ConditionNetwork {
       ctx.stroke();
     }
     ctx.setLineDash([]);
-    if (this.nodes.length < 300)
+    if (this.layers.labels && this.nodes.length < 300)
       for (const t of this.triangles) {
         const x = t.nodes.reduce((s, p) => s + p.screen.x, 0) / 3,
           y = t.nodes.reduce((s, p) => s + p.screen.y, 0) / 3;
@@ -519,48 +632,57 @@ export class ConditionNetwork {
         unknown = this.values[p.l.v] == null,
         match = this.values[p.l.v] === p.l.on;
       ctx.globalAlpha = fadeFor(p);
-      if (active || selected || this.activeVariable === p.l.v) {
+      if (
+        this.layers.nodes &&
+        (active || selected || this.activeVariable === p.l.v)
+      ) {
         ctx.beginPath();
         ctx.arc(s.x, s.y, radius + 4, 0, Math.PI * 2);
         ctx.strokeStyle = selected ? colors.selected : p.color;
         ctx.lineWidth = 1.5;
         ctx.stroke();
       }
-      ctx.shadowColor = colors.shadow;
-      ctx.shadowBlur = 5;
-      ctx.shadowOffsetY = 2;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, radius, 0, Math.PI * 2);
-      ctx.fillStyle = unknown
-        ? colors.unknown
-        : p.l.on
-          ? colors.on
-          : colors.off;
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetY = 0;
-      ctx.strokeStyle = p.color;
-      ctx.lineWidth = 1.8;
-      ctx.stroke();
-      if (radius >= 8) {
+      if (this.layers.nodes) {
+        ctx.shadowColor = colors.shadow;
+        ctx.shadowBlur = 5;
+        ctx.shadowOffsetY = 2;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = unknown
+          ? colors.unknown
+          : p.l.on
+            ? colors.on
+            : colors.off;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+      }
+      if (radius >= 8 && (this.layers.labels || this.layers.nodes)) {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillStyle = p.l.on ? colors.onText : colors.offText;
-        ctx.font = `500 ${Math.max(8, Math.min(11, radius * 0.7))}px "IBM Plex Mono",monospace`;
-        ctx.fillText(`${nameOf(p.l.v)}${p.l.on ? "+" : "−"}`, s.x, s.y - 0.6);
-        const bx = s.x + radius * 0.72,
-          by = s.y + radius * 0.72;
-        ctx.beginPath();
-        ctx.arc(bx, by, 4.7, 0, Math.PI * 2);
-        ctx.fillStyle = unknown
-          ? colors.unknownBadge
-          : match
-            ? colors.matchBadge
-            : colors.missBadge;
-        ctx.fill();
-        ctx.fillStyle = colors.badgeText;
-        ctx.font = "bold 7px sans-serif";
-        ctx.fillText(unknown ? "?" : match ? "✓" : "×", bx, by + 0.3);
+        if (this.layers.labels) {
+          ctx.fillStyle = p.l.on ? colors.onText : colors.offText;
+          ctx.font = `500 ${Math.max(8, Math.min(11, radius * 0.7))}px "IBM Plex Mono",monospace`;
+          ctx.fillText(`${nameOf(p.l.v)}${p.l.on ? "+" : "−"}`, s.x, s.y - 0.6);
+        }
+        if (this.layers.nodes) {
+          const bx = s.x + radius * 0.72,
+            by = s.y + radius * 0.72;
+          ctx.beginPath();
+          ctx.arc(bx, by, 4.7, 0, Math.PI * 2);
+          ctx.fillStyle = unknown
+            ? colors.unknownBadge
+            : match
+              ? colors.matchBadge
+              : colors.missBadge;
+          ctx.fill();
+          ctx.fillStyle = colors.badgeText;
+          ctx.font = "bold 7px sans-serif";
+          ctx.fillText(unknown ? "?" : match ? "✓" : "×", bx, by + 0.3);
+        }
       }
     }
     ctx.globalAlpha = 1;
@@ -570,6 +692,7 @@ export class ConditionNetwork {
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   }
   hit(point) {
+    if (!this.layers.nodes) return null;
     let best = null,
       dist = Infinity;
     for (const p of this.nodes) {

@@ -319,7 +319,77 @@
                 Fabric
               </button>
               <span id="fabric-description">Spread into a flexible sheet</span>
+              <button
+                id="lift-btn"
+                class="layer-button lift-button"
+                type="button"
+                aria-pressed="false"
+                hidden
+                title="Raise matching conditions above the sheet"
+              >
+                ↑ Lift matches
+              </button>
             </div>
+            <div
+              class="network-layers"
+              role="group"
+              aria-label="Network visibility"
+            >
+              <span class="layers-label">Show</span>
+              <button
+                class="layer-button"
+                data-layer="nodes"
+                type="button"
+                aria-pressed="true"
+              >
+                Nodes
+              </button>
+              <button
+                class="layer-button"
+                data-layer="labels"
+                type="button"
+                aria-pressed="true"
+              >
+                Labels
+              </button>
+              <button
+                class="layer-button"
+                data-layer="fills"
+                type="button"
+                aria-pressed="true"
+              >
+                Rule fills
+              </button>
+              <button
+                class="layer-button"
+                data-layer="rule"
+                type="button"
+                aria-pressed="true"
+              >
+                <i class="line-key rule-line" aria-hidden="true"></i>Rule links
+              </button>
+              <button
+                class="layer-button"
+                data-layer="same"
+                type="button"
+                aria-pressed="true"
+              >
+                <i class="line-key identical-line" aria-hidden="true"></i
+                >Identical
+              </button>
+              <button
+                class="layer-button"
+                data-layer="contradictions"
+                type="button"
+                aria-pressed="true"
+              >
+                <i class="line-key contradiction-line" aria-hidden="true"></i
+                >Contradictions
+              </button>
+            </div>
+            <p class="network-explanation">
+              Red dots connect the same switch requiring opposite states.
+            </p>
             <div class="network-viewport" id="network-viewport">
               <canvas
                 id="network"
@@ -360,6 +430,9 @@
               ><span
                 ><i class="line-key identical-line"></i> Identical
                 condition</span
+              ><span
+                ><i class="line-key contradiction-line"></i> Opposite
+                conditions</span
               ><span class="depth-hint" id="network-mode-label"
                 >3D · touch to explore</span
               >
@@ -458,7 +531,11 @@
           zoom. Use Shift + drag to pan. Node fills show ON/OFF requirements;
           their colored outlines identify rules. Turn on Fabric to spread the
           net into an elastic sheet. Pull a node to stretch its connections;
-          release it to let the fabric settle.
+          release it to let the fabric settle. Lift matches raises fulfilled
+          conditions above the sheet, following the current settings and
+          walkthrough step. The Show buttons hide individual visual layers. Red
+          dotted links join opposite requirements for the same switch; their
+          presence alone does not mean the whole formula is unsatisfiable.
         </li>
         <li>
           Import or export standard DIMACS CNF to study your own formulas.

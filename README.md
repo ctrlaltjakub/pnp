@@ -27,6 +27,12 @@ Drag a node to move it, drag the background to orbit in 3D, Shift-drag to pan, a
 
 Turn on **Fabric** to spread each connected net into a flat sheet of triangular rule patches. Elastic springs transmit pulls through rule edges and identical-condition stitches, with bending resistance and gentle restoring forces that let the sheet settle after a drag. The graph's connections and the current walkthrough stay the same. Turning Fabric off restores the previous 3D layout and camera. Fabric remains selected when you generate or load another problem; when physics is paused, switching layouts still works but motion remains paused.
 
+Red dotted links connect every opposite-polarity occurrence of the same switch (for example A ON ↔ A OFF), independent of the current assignment. They are visual relationships, so they do not change the spring system. Contradicting individual requirements do not by themselves make a formula unsatisfiable. These links are stored as groups of occurrences to avoid allocating a quadratic list of pairs.
+
+The **Show** buttons independently toggle nodes, labels, rule fills, rule links, identical-condition links, and contradictions. Visibility preferences persist on this device and across new problems. Hidden nodes cannot be selected or dragged; visibility changes preserve physics, layout, and walkthrough progress.
+
+In Fabric view, **Lift matches** raises the currently fulfilled conditions above the sheet and tilts the view to make their height visible. Unfulfilled and undecided conditions stay on the base plane. Heights follow the displayed assignment during manual edits and walkthroughs, including when physics is paused. With physics running, springs smoothly approach the target heights.
+
 ## Formula workbench and persistence
 
 Import/export DIMACS CNF with exactly three distinct variables per clause. Comments and clauses across multiple lines are accepted. Headers, literal bounds, duplicate variables, clause sizes, and terminators are validated. The workbench includes an unsatisfiable 3-variable / 8-clause example. You can also open JSON puzzle snapshots.

@@ -191,6 +191,142 @@ test("network models both connection dimensions, separates components, and suppo
       net.nodes.some((p) => p.z !== 0),
       "new problems restore their own 3D layout",
     );
+    // Opposites are all cross-polarity pairs of the same switch, including
+    // multiple occurrences, while same-polarity and other switches stay out.
+    const mixed = [
+      {
+        id: "R1",
+        lits: [
+          { v: 0, on: true },
+          { v: 1, on: true },
+          { v: 2, on: false },
+        ],
+      },
+      {
+        id: "R2",
+        lits: [
+          { v: 0, on: false },
+          { v: 1, on: true },
+          { v: 3, on: true },
+        ],
+      },
+      {
+        id: "R3",
+        lits: [
+          { v: 0, on: true },
+          { v: 2, on: true },
+          { v: 4, on: false },
+        ],
+      },
+    ];
+    net.setProblem(5, mixed);
+    const pairs = net.contradictionGroups
+      .flatMap((g) =>
+        g.on.flatMap((a) =>
+          g.off.map((b) => `${a.rule}:${a.l.v}-${b.rule}:${b.l.v}`),
+        ),
+      )
+      .sort();
+    assert.deepEqual(pairs, ["R1:0-R2:0", "R3:0-R2:0", "R3:2-R1:2"]);
+    assert.equal(net.contradictionCount, 3);
+    assert.equal(
+      net.edges.filter((e) => e.kind === "contradiction").length,
+      0,
+      "red links do not add springs",
+    );
+    net.setLayer("nodes", true);
+    net.draw();
+    const pose = net.nodes.map(({ x, y, z }) => ({ x, y, z }));
+    const red = [];
+    let arcs = 0,
+      texts = 0;
+    context.stroke = () => {
+      if (context.strokeStyle === net.palette.contradiction) red.push(true);
+    };
+    context.arc = () => arcs++;
+    context.fillText = () => texts++;
+    net.draw();
+    assert.ok(red.length > 0, "contradiction strokes are drawn");
+    net.setLayer("contradictions", false);
+    red.length = 0;
+    net.draw();
+    assert.equal(red.length, 0, "hidden contradiction strokes disappear");
+    for (const layer of Object.keys(net.layers)) net.setLayer(layer, false);
+    arcs = texts = 0;
+    net.draw();
+    assert.equal(arcs, 0);
+    assert.equal(texts, 0);
+    assert.equal(
+      net.hit(net.nodes[0].screen),
+      null,
+      "hidden nodes cannot be clicked",
+    );
+    assert.deepEqual(
+      net.nodes.map(({ x, y, z }) => ({ x, y, z })),
+      pose,
+      "visibility does not move the net",
+    );
+    net.setLayer("labels", true);
+    texts = 0;
+    arcs = 0;
+    net.draw();
+    assert.ok(texts > 0);
+    assert.equal(arcs, 0, "labels can be displayed independently");
+    for (const layer of Object.keys(net.layers)) net.setLayer(layer, true);
+    net.running = true;
+    net.setFabric(true);
+    const values = [true, false, true, false, false];
+    net.update({ values });
+    net.setLiftMatches(true);
+    for (let i = 0; i < 700; i++) net.tick();
+    for (const p of net.nodes)
+      assert.ok(
+        Math.abs(p.z - (values[p.l.v] === p.l.on ? 80 : 0)) < 1,
+        "fulfilled conditions rise while others remain level",
+      );
+    net.running = false;
+    values[0] = false;
+    net.update({ values });
+    for (const p of net.nodes)
+      assert.equal(
+        p.z,
+        values[p.l.v] === p.l.on ? 80 : 0,
+        "paused heights follow in-place assignment changes",
+      );
+    net.update({ values: Array(5).fill(null) });
+    assert.ok(
+      net.nodes.every((p) => p.z === 0),
+      "undecided conditions are not lifted",
+    );
+    net.setLiftMatches(false);
+    net.nodes[0].z = 20;
+    net.update({ values: Array(5).fill(null), rule: "R1" });
+    assert.equal(
+      net.nodes[0].z,
+      20,
+      "ordinary highlighting preserves paused fabric deformation",
+    );
+    net.setLayer("contradictions", false);
+    net.setProblem(3, [
+      {
+        id: "R1",
+        lits: [
+          { v: 0, on: true },
+          { v: 1, on: true },
+          { v: 2, on: true },
+        ],
+      },
+    ]);
+    assert.equal(
+      net.layers.contradictions,
+      false,
+      "new puzzles preserve visibility",
+    );
+    assert.equal(
+      net.contradictionCount,
+      0,
+      "new puzzles discard old contradiction groups",
+    );
   } finally {
     for (const [k, desc] of old) {
       if (desc) Object.defineProperty(globalThis, k, desc);
