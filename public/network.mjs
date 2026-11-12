@@ -353,10 +353,6 @@ export class ConditionNetwork {
     if (this.liftMatches === enabled) return;
     this.liftMatches = enabled;
     if (this.fabric) {
-      if (enabled) {
-        this.flatRotation = { ...this.rotation };
-        this.rotation = { x: 0.6, y: -0.2 };
-      } else this.rotation = { ...(this.flatRotation || { x: -0.12, y: 0 }) };
       this.syncFabricHeights();
       this.energy = 1;
     }
@@ -397,11 +393,7 @@ export class ConditionNetwork {
     );
   }
   fit() {
-    this.rotation = this.fabric
-      ? this.liftMatches
-        ? { x: 0.6, y: -0.2 }
-        : { x: -0.12, y: 0 }
-      : { x: -0.16, y: 0.2 };
+    this.rotation = this.fabric ? { x: -0.12, y: 0 } : { x: -0.16, y: 0.2 };
     this.pan = { x: 0, y: 0 };
     this.zoom = 1;
     this.computeScale();

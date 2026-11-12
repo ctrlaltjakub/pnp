@@ -277,8 +277,14 @@ test("network models both connection dimensions, separates components, and suppo
     net.setFabric(true);
     const values = [true, false, true, false, false];
     net.update({ values });
+    net.rotation = { x: 0.3, y: 1.1 };
     net.setLiftMatches(true);
     for (let i = 0; i < 700; i++) net.tick();
+    assert.deepEqual(
+      net.rotation,
+      { x: 0.3, y: 1.1 },
+      "lifting conditions preserves the viewing angle throughout the animation",
+    );
     for (const p of net.nodes)
       assert.ok(
         Math.abs(p.z - (values[p.l.v] === p.l.on ? 32 : 0)) < 1,
@@ -335,7 +341,13 @@ test("network models both connection dimensions, separates components, and suppo
       net.nodes.every((p) => p.z === 0),
       "undecided conditions are not lifted",
     );
+    net.rotation = { x: 0.9, y: -1.4 };
     net.setLiftMatches(false);
+    assert.deepEqual(
+      net.rotation,
+      { x: 0.9, y: -1.4 },
+      "lowering conditions preserves rotations made while lifted",
+    );
     net.nodes[0].z = 20;
     net.update({ values: Array(5).fill(null), rule: "R1" });
     assert.equal(
