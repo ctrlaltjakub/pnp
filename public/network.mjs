@@ -1,4 +1,4 @@
-import { nameOf, conditionKey, evaluate } from "./engine.mjs";
+import { nameOf, conditionKey } from "./engine.mjs";
 export const ruleColor = (i) =>
   `hsl(${[18, 88, 198, 278, 43, 161, 326, 224, 115, 5][i % 10] + Math.floor(i / 10) * 137.508} 36% 58%)`;
 
@@ -20,6 +20,7 @@ export class ConditionNetwork {
     this.zoom = 1;
     this.baseScale = 1;
     this.running = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+    this.fabric = false;
     this.pointers = new Map();
     this.drag = null;
     this.width = 0;
@@ -80,10 +81,13 @@ export class ConditionNetwork {
     this.raf = requestAnimationFrame(this.frame);
   }
   setProblem(n, rules) {
+    const restoreFabric = this.fabric;
+    this.fabric = false;
     this.rules = rules;
     this.nodes = [];
     this.edges = [];
     this.triangles = [];
+    this.ruleNodes = new Map();
     const same = new Map();
     // Union rule components through identical literals, not through complements.
     const parents = rules.map((_, i) => i);
@@ -154,6 +158,7 @@ export class ConditionNetwork {
           if (!same.has(node.key)) same.set(node.key, []);
           same.get(node.key).push(node);
         });
+        this.ruleNodes.set(ruleIndex, tri);
         this.triangles.push({
           nodes: tri,
           color: ruleColor(ruleIndex),
@@ -179,11 +184,74 @@ export class ConditionNetwork {
           strength: 0.0035,
           kind: "same",
         });
+    this.prepareFabric([...groups.values()]);
     this.energy = 1;
     this.rotation = { x: -0.16, y: 0.2 };
     this.pan = { x: 0, y: 0 };
     this.zoom = 1;
     this.fit();
+    if (restoreFabric) this.setFabric(true);
+  }
+  prepareFabric(groups) {
+    // Each disconnected net gets its own sheet. Patch anchors keep the net
+    // spread without inventing connections between unrelated conditions.
+    let offset = 0;
+    for (const members of groups) {
+      const columns = Math.ceil(Math.sqrt(members.length));
+      const rows = Math.ceil(members.length / columns);
+      members.forEach((ruleIndex, i) => {
+        const col = i % columns,
+          row = Math.floor(i / columns);
+        const cx = offset + col * 150;
+        const cy = (row - (rows - 1) / 2) * 130;
+        // Triangles are built in component order, so look up by rule index.
+        const nodes = this.ruleNodes.get(ruleIndex);
+        nodes.forEach((p, k) => {
+          const angle = -Math.PI / 2 + (k * Math.PI * 2) / 3;
+          p.fabricHome = {
+            x: cx + Math.cos(angle) * 43,
+            y: cy + Math.sin(angle) * 43,
+            z: 0,
+          };
+        });
+      });
+      offset += columns * 150 + 80;
+    }
+    let left = Infinity,
+      right = -Infinity;
+    for (const p of this.nodes) {
+      left = Math.min(left, p.fabricHome.x);
+      right = Math.max(right, p.fabricHome.x);
+    }
+    for (const p of this.nodes) p.fabricHome.x -= (left + right) / 2;
+    for (const e of this.edges)
+      e.fabricLength = Math.hypot(
+        e.a.fabricHome.x - e.b.fabricHome.x,
+        e.a.fabricHome.y - e.b.fabricHome.y,
+      );
+  }
+  setFabric(enabled) {
+    if (this.fabric === enabled) return;
+    this.fabric = enabled;
+    this.drag = null;
+    if (enabled) {
+      this.spaceCamera = {
+        rotation: { ...this.rotation },
+        pan: { ...this.pan },
+        zoom: this.zoom,
+        baseScale: this.baseScale,
+      };
+      for (const p of this.nodes) {
+        p.spacePose = { x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz };
+        Object.assign(p, p.fabricHome, { vx: 0, vy: 0, vz: 0 });
+      }
+      this.fit();
+    } else {
+      for (const p of this.nodes) Object.assign(p, p.spacePose);
+      if (this.spaceCamera) Object.assign(this, this.spaceCamera);
+    }
+    this.energy = 1;
+    this.draw();
   }
   update({ values, rule = null, literal = null, variable = null }) {
     this.values = values;
@@ -211,7 +279,7 @@ export class ConditionNetwork {
     );
   }
   fit() {
-    this.rotation = { x: -0.16, y: 0.2 };
+    this.rotation = this.fabric ? { x: -0.12, y: 0 } : { x: -0.16, y: 0.2 };
     this.pan = { x: 0, y: 0 };
     this.zoom = 1;
     this.computeScale();
@@ -235,9 +303,11 @@ export class ConditionNetwork {
     }
     for (const p of this.nodes) {
       if (this.drag?.node === p) continue;
-      let fx = (p.anchor.x - p.x) * 0.0006,
-        fy = (p.anchor.y - p.y) * 0.0006,
-        fz = (p.anchor.z - p.z) * 0.0006;
+      const anchor = this.fabric ? p.fabricHome : p.anchor;
+      const tension = this.fabric ? 0.0018 : 0.0006;
+      let fx = (anchor.x - p.x) * tension,
+        fy = (anchor.y - p.y) * tension,
+        fz = this.fabric ? -p.z * 0.018 : (anchor.z - p.z) * 0.0006;
       const x = Math.floor(p.x / cell),
         y = Math.floor(p.y / cell),
         z = Math.floor(p.z / cell);
@@ -253,7 +323,7 @@ export class ConditionNetwork {
                 az = p.z - q.z;
               const d2 = Math.max(60, ax * ax + ay * ay + az * az);
               if (d2 > 11000) continue;
-              const f = 30 / (d2 * Math.sqrt(d2));
+              const f = (this.fabric ? 100 : 30) / (d2 * Math.sqrt(d2));
               fx += ax * f;
               fy += ay * f;
               fz += az * f;
@@ -267,11 +337,18 @@ export class ConditionNetwork {
       let x = e.b.x - e.a.x,
         y = e.b.y - e.a.y,
         z = e.b.z - e.a.z;
-      const d = Math.max(1, Math.hypot(x, y, z)),
-        f = (((d - e.length) * e.strength) / d) * dt;
+      const d = Math.max(1, Math.hypot(x, y, z));
+      const length = this.fabric ? e.fabricLength : e.length;
+      const strength = this.fabric
+        ? e.kind === "rule"
+          ? 0.03
+          : 0.018
+        : e.strength;
+      const f = (((d - length) * strength) / d) * dt;
       x *= f;
       y *= f;
-      z *= f;
+      // Neighbor coupling spreads out-of-plane pulls through the sheet.
+      z *= f + (this.fabric ? 0.012 * dt : 0);
       if (this.drag?.node !== e.a) {
         e.a.vx += x;
         e.a.vy += y;
@@ -283,7 +360,7 @@ export class ConditionNetwork {
         e.b.vz -= z;
       }
     }
-    const friction = Math.pow(0.82, dt);
+    const friction = Math.pow(this.fabric ? 0.89 : 0.82, dt);
     for (const p of this.nodes) {
       if (this.drag?.node === p) {
         p.vx = p.vy = p.vz = 0;
@@ -350,11 +427,11 @@ export class ConditionNetwork {
       ctx.beginPath();
       ctx.moveTo(a.x, a.y);
       ctx.lineTo(b.x, b.y);
-      ctx.strokeStyle = e.kind === "same" ? "#9ca38e" : e.color;
-      ctx.lineWidth = active ? 2.3 : e.kind === "same" ? 1 : 1.4;
+      ctx.strokeStyle = e.kind === "same" ? "#7f8870" : e.color;
+      ctx.lineWidth = active ? 2.3 : e.kind === "same" ? 1.5 : 1.4;
       ctx.setLineDash(e.kind === "same" ? [3, 5] : []);
       ctx.globalAlpha =
-        (e.kind === "same" ? 0.36 : 0.65) *
+        (e.kind === "same" ? 0.85 : 0.65) *
         Math.max(fadeFor(e.a), fadeFor(e.b));
       if (active) ctx.globalAlpha = 1;
       ctx.stroke();

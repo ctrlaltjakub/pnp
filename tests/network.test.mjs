@@ -117,13 +117,80 @@ test("network models both connection dimensions, separates components, and suppo
     for (let i = 0; i < 150; i++) net.tick();
     assert.ok(net.nodes.every((p) => [p.x, p.y, p.z].every(Number.isFinite)));
     net.draw();
+    // Fabric changes the physics/layout without changing the graph or assignment.
+    const spacePositions = net.nodes.map(({ x, y, z }) => ({ x, y, z }));
+    const spaceCamera = structuredClone({
+      rotation: net.rotation,
+      pan: net.pan,
+      zoom: net.zoom,
+    });
+    const originalNodes = [...net.nodes],
+      originalEdges = [...net.edges];
+    const assignment = [...net.values];
+    net.setFabric(true);
+    assert.ok(net.nodes.every((p) => p.z === 0));
+    assert.deepEqual(net.values, assignment);
+    assert.deepEqual(net.nodes, originalNodes);
+    assert.deepEqual(net.edges, originalEdges);
+    // Pull a condition up from the sheet, holding it in place like a pointer drag.
+    const pulled = net.nodes[0],
+      stitchedNeighbor = net.edges.find((e) => e.kind === "same").b;
+    pulled.z = 60;
+    pulled.x += 50;
+    net.drag = { node: pulled };
+    for (let i = 0; i < 80; i++) net.tick();
+    assert.equal(pulled.z, 60);
+    assert.ok(
+      stitchedNeighbor.z > 1,
+      "a pull propagates through identical-condition stitches",
+    );
+    assert.ok(
+      net.nodes.filter((p) => p.rule === "R3").every((p) => p.z === 0),
+      "disconnected fabric stays independent",
+    );
+    net.drag = null;
+    for (let i = 0; i < 600; i++) net.tick();
+    assert.ok(
+      net.nodes.every((p) => Math.abs(p.z) < 0.2),
+      "the sheet settles back to its plane",
+    );
+    assert.ok(
+      Math.abs(pulled.x - pulled.fabricHome.x) < 15,
+      "tension relaxes the stretched patch",
+    );
+    net.setFabric(false);
+    assert.deepEqual(
+      net.nodes.map(({ x, y, z }) => ({ x, y, z })),
+      spacePositions,
+    );
+    assert.deepEqual(
+      { rotation: net.rotation, pan: net.pan, zoom: net.zoom },
+      spaceCamera,
+    );
+    net.running = false;
+    net.setFabric(true);
+    assert.equal(net.running, false, "layout changes respect paused physics");
+    const pausedPositions = net.nodes.map(({ x, y, z }) => ({ x, y, z }));
+    net.frame(16);
+    net.frame(32);
+    assert.deepEqual(
+      net.nodes.map(({ x, y, z }) => ({ x, y, z })),
+      pausedPositions,
+    );
     const large = generate(80, 500);
     net.setProblem(large.n, large.rules);
+    assert.equal(net.fabric, true, "new problems retain the selected layout");
+    assert.ok(net.nodes.every((p) => p.z === 0));
     net.resize();
     for (let i = 0; i < 3; i++) net.tick();
     net.draw();
     assert.equal(net.nodes.length, 1500);
     assert.ok(net.nodes.every((p) => [p.x, p.y, p.z].every(Number.isFinite)));
+    net.setFabric(false);
+    assert.ok(
+      net.nodes.some((p) => p.z !== 0),
+      "new problems restore their own 3D layout",
+    );
   } finally {
     for (const [k, desc] of old) {
       if (desc) Object.defineProperty(globalThis, k, desc);

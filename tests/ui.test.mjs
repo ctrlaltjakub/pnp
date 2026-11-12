@@ -83,6 +83,11 @@ test("UI completes both manual walkthroughs, preserves sorting, imports UNSAT, a
     assert.equal(view().step.type, "start");
     click("next-btn");
     const snapshot = JSON.stringify(view().step);
+    assert.equal($("fabric-btn").getAttribute("aria-checked"), "false");
+    click("fabric-btn");
+    assert.equal($("fabric-btn").getAttribute("aria-checked"), "true");
+    assert.equal(JSON.stringify(view().step), snapshot);
+    assert.ok($("fabric-description").textContent.includes("stretch"));
     click("sort-btn");
     assert.equal(JSON.stringify(view().step), snapshot);
     assert.equal(view().order, 1);
@@ -148,6 +153,9 @@ test("UI completes both manual walkthroughs, preserves sorting, imports UNSAT, a
     assert.deepEqual(payload.values, view().values);
     assert.equal(payload.rules.length, 1);
     assert.equal($("network-summary").textContent, "3 conditions · 1 network");
+    assert.equal($("fabric-btn").getAttribute("aria-checked"), "true");
+    click("fabric-btn");
+    assert.equal($("fabric-btn").getAttribute("aria-checked"), "false");
     click("physics-btn");
     assert.equal($("physics-btn").getAttribute("aria-pressed"), "false");
     click("physics-btn");

@@ -23,6 +23,8 @@ Every literal occurrence is a separate node. Rule-colored triangles connect the 
 
 Drag a node to move it, drag the background to orbit in 3D, Shift-drag to pan, and pinch/scroll to zoom. On touch devices, two fingers also pan. The canvas supports keyboard arrows, `+`/`-`, and Home. Physics can be paused and starts paused when reduced motion is requested.
 
+Turn on **Fabric** to spread each connected net into a flat sheet of triangular rule patches. Elastic springs transmit pulls through rule edges and identical-condition stitches, with bending resistance and gentle restoring forces that let the sheet settle after a drag. The graph's connections and the current walkthrough stay the same. Turning Fabric off restores the previous 3D layout and camera. Fabric remains selected when you generate or load another problem; when physics is paused, switching layouts still works but motion remains paused.
+
 ## Formula workbench and persistence
 
 Import/export DIMACS CNF with exactly three distinct variables per clause. Comments and clauses across multiple lines are accepted. Headers, literal bounds, duplicate variables, clause sizes, and terminators are validated. The workbench includes an unsatisfiable 3-variable / 8-clause example. You can also open JSON puzzle snapshots.

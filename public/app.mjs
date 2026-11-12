@@ -435,6 +435,22 @@ $("physics-btn").addEventListener("click", () => {
   $("physics-btn").querySelector("span").textContent = network.running
     ? "Physics on"
     : "Physics paused";
+  updateFabricControls();
+});
+function updateFabricControls() {
+  $("fabric-btn").setAttribute("aria-checked", String(network.fabric));
+  $("fabric-description").textContent = network.fabric
+    ? network.running
+      ? "Drag to stretch. Release to settle."
+      : "Physics paused. Drag to reshape."
+    : "Spread into a flexible sheet";
+  $("network-mode-label").textContent = network.fabric
+    ? "Fabric · elastic sheet"
+    : "3D · touch to explore";
+}
+$("fabric-btn").addEventListener("click", () => {
+  network.setFabric(!network.fabric);
+  updateFabricControls();
 });
 $("zoom-in").addEventListener("click", () => network.changeZoom(1.2));
 $("zoom-out").addEventListener("click", () => network.changeZoom(1 / 1.2));

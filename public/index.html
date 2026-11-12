@@ -285,6 +285,20 @@
               One node per condition. Same rule, same color.
               <span class="network-signs">A+ = ON · A− = OFF</span>
             </div>
+            <div class="network-layout">
+              <button
+                id="fabric-btn"
+                class="fabric-button"
+                type="button"
+                role="switch"
+                aria-checked="false"
+                aria-describedby="fabric-description"
+              >
+                <span class="fabric-toggle" aria-hidden="true"><i></i></span>
+                Fabric
+              </button>
+              <span id="fabric-description">Spread into a flexible sheet</span>
+            </div>
             <div class="network-viewport" id="network-viewport">
               <canvas
                 id="network"
@@ -325,7 +339,9 @@
               ><span
                 ><i class="line-key identical-line"></i> Identical
                 condition</span
-              ><span class="depth-hint">3D · touch to explore</span>
+              ><span class="depth-hint" id="network-mode-label"
+                >3D · touch to explore</span
+              >
             </div>
           </section>
         </div>
@@ -419,7 +435,9 @@
         <li>
           Drag network nodes, drag empty space to rotate, and pinch or scroll to
           zoom. Use Shift + drag to pan. Node fills show ON/OFF requirements;
-          their colored outlines identify rules.
+          their colored outlines identify rules. Turn on Fabric to spread the
+          net into an elastic sheet. Pull a node to stretch its connections;
+          release it to let the fabric settle.
         </li>
         <li>
           Import or export standard DIMACS CNF to study your own formulas.
