@@ -1,4 +1,5 @@
 import { nameOf, conditionKey } from "./engine.mjs";
+const SPACE_SPACING = 1.6;
 export const ruleColor = (i) =>
   `hsl(${[18, 88, 198, 278, 43, 161, 326, 224, 115, 5][i % 10] + Math.floor(i / 10) * 137.508} 36% 58%)`;
 const palettes = {
@@ -150,15 +151,16 @@ export class ConditionNetwork {
     let gi = 0;
     this.components = groups.size;
     for (const members of groups.values()) {
-      const groupRadius = Math.max(70, Math.sqrt(members.length) * 32),
+      const groupRadius =
+          Math.max(70, Math.sqrt(members.length) * 32) * SPACE_SPACING,
         angle = (gi / groups.size) * Math.PI * 2;
       const center =
         groups.size === 1
           ? { x: 0, y: 0, z: 0 }
           : {
-              x: Math.cos(angle) * (100 + groups.size * 28),
-              y: Math.sin(angle) * (100 + groups.size * 28),
-              z: Math.sin(gi * 2) * 40,
+              x: Math.cos(angle) * (100 + groups.size * 28) * SPACE_SPACING,
+              y: Math.sin(angle) * (100 + groups.size * 28) * SPACE_SPACING,
+              z: Math.sin(gi * 2) * 40 * SPACE_SPACING,
             };
       gi++;
       members.forEach((ruleIndex, j) => {
@@ -176,9 +178,9 @@ export class ConditionNetwork {
             ruleIndex,
             l,
             key: conditionKey(l),
-            x: cx + Math.cos(b) * 32,
-            y: cy + Math.sin(b) * 32,
-            z: cz + Math.cos(b + j) * 20,
+            x: cx + Math.cos(b) * 32 * SPACE_SPACING,
+            y: cy + Math.sin(b) * 32 * SPACE_SPACING,
+            z: cz + Math.cos(b + j) * 20 * SPACE_SPACING,
             vx: 0,
             vy: 0,
             vz: 0,
@@ -200,7 +202,7 @@ export class ConditionNetwork {
           this.edges.push({
             a: tri[k],
             b: tri[(k + 1) % 3],
-            length: 68,
+            length: 68 * SPACE_SPACING,
             strength: 0.012,
             kind: "rule",
             color: ruleColor(ruleIndex),
@@ -212,7 +214,7 @@ export class ConditionNetwork {
         this.edges.push({
           a: list[i - 1],
           b: list[i],
-          length: 105,
+          length: 105 * SPACE_SPACING,
           strength: 0.0035,
           kind: "same",
         });
@@ -326,9 +328,10 @@ export class ConditionNetwork {
   }
   tick(dt = 1) {
     if (!this.nodes.length || !dt) return;
+    const spacing = this.fabric ? 1 : SPACE_SPACING;
     // Local repulsion uses spatial bins; long-range attraction is a weak component anchor.
     const grid = new Map(),
-      cell = 75;
+      cell = 75 * spacing;
     for (const p of this.nodes) {
       const k = [
         Math.floor(p.x / cell),
@@ -358,9 +361,15 @@ export class ConditionNetwork {
               const ax = p.x - q.x,
                 ay = p.y - q.y,
                 az = p.z - q.z;
-              const d2 = Math.max(60, ax * ax + ay * ay + az * az);
-              if (d2 > 11000) continue;
-              const f = (this.fabric ? 100 : 30) / (d2 * Math.sqrt(d2));
+              const d2 = Math.max(
+                60 * spacing ** 2,
+                ax * ax + ay * ay + az * az,
+              );
+              if (d2 > 11000 * spacing ** 2) continue;
+              // Inverse-square repulsion scales cubically with distance to
+              // balance the longer springs at the same relative spacing.
+              const f =
+                (this.fabric ? 100 : 30 * spacing ** 3) / (d2 * Math.sqrt(d2));
               fx += ax * f;
               fy += ay * f;
               fz += az * f;
@@ -398,6 +407,7 @@ export class ConditionNetwork {
       }
     }
     const friction = Math.pow(this.fabric ? 0.89 : 0.82, dt);
+    const maxSpeed = 5 * spacing;
     for (const p of this.nodes) {
       if (this.drag?.node === p) {
         p.vx = p.vy = p.vz = 0;
@@ -406,9 +416,9 @@ export class ConditionNetwork {
       p.vx *= friction;
       p.vy *= friction;
       p.vz *= friction;
-      p.x += Math.max(-5, Math.min(5, p.vx)) * dt;
-      p.y += Math.max(-5, Math.min(5, p.vy)) * dt;
-      p.z += Math.max(-5, Math.min(5, p.vz)) * dt;
+      p.x += Math.max(-maxSpeed, Math.min(maxSpeed, p.vx)) * dt;
+      p.y += Math.max(-maxSpeed, Math.min(maxSpeed, p.vy)) * dt;
+      p.z += Math.max(-maxSpeed, Math.min(maxSpeed, p.vz)) * dt;
     }
     // Ease initial framing as the spring system settles; user zoom and panning stay intact.
     if (this.energy > 0.01 && !this.drag) {
