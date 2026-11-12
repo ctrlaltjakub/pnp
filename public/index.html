@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f6f5f0" />
+    <meta
+      name="description"
+      content="Explore 3-SAT, one switch at a time. A hands-on logic lab with a manual backtracking solver and a living, physics-based condition network."
+    />
+    <title>P / NP — A playground for possibility</title>
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/style.css" />
+    <script type="module" src="/app.mjs"></script>
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="site-header">
+        <a href="/" class="brand" aria-label="P / NP home"
+          ><span class="brand-icon" aria-hidden="true"
+            ><i></i><i></i><i></i></span
+          ><span
+            >P <em>/</em> NP<span class="brand-sub"
+              >THE LOGIC PLAYGROUND</span
+            ></span
+          ></a
+        >
+        <div class="header-actions">
+          <span class="local-label"
+            ><span class="dot"></span> Your own little universe of logic</span
+          ><button class="text-button" id="help-btn">
+            <span class="help-circle">?</span> How it works</button
+          ><a
+            class="icon-button github-link"
+            href="https://github.com/ctrlaltjakub/pnp"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="View public source on GitHub"
+            ><svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M9 19c-4.5 1.4-4.5-2.5-6-3m12 6v-4c0-1.2-.4-2-1-2.6 3.3-.4 6.7-1.6 6.7-7A5.5 5.5 0 0 0 19.2 4a5.1 5.1 0 0 0-.1-4S17.9-.4 15 1.5a13.4 13.4 0 0 0-7 0C5.1-.4 3.9 0 3.9 0a5.1 5.1 0 0 0-.1 4A5.5 5.5 0 0 0 2.3 8c0 5.4 3.4 6.6 6.7 7-.6.6-1 1.4-1 2.6V22"
+                transform="translate(1 1) scale(.9)"
+              /></svg
+          ></a>
+        </div>
+      </header>
+
+      <main>
+        <section class="intro">
+          <div>
+            <div class="eyebrow">
+              <span class="mini-spark">✳</span> THINK WITH YOUR HANDS
+            </div>
+            <h1>A playground for <em>possibility.</em></h1>
+            <p>
+              Flip a switch. Follow the connections. Find the assignment that
+              makes everything click.
+            </p>
+          </div>
+          <div class="problem-stamp">
+            <span class="stamp-symbol">3<span>SAT</span></span>
+            <div>
+              Three conditions per rule.<br />One match is enough.<br /><strong
+                >Every rule must pass.</strong
+              >
+            </div>
+          </div>
+        </section>
+
+        <section class="panel control-panel" aria-label="Problem controls">
+          <form id="size-form" class="size-controls">
+            <div class="control-label">
+              <span class="small-icon">⊞</span>
+              <div>Make it yours<span>Choose your problem size</span></div>
+            </div>
+            <label class="size-field" for="switch-count"
+              ><span>Switches</span>
+              <div class="stepper">
+                <button
+                  type="button"
+                  data-step="switch-count:-1"
+                  aria-label="Fewer switches"
+                >
+                  −</button
+                ><input
+                  id="switch-count"
+                  type="number"
+                  min="3"
+                  step="1"
+                  value="6"
+                  required
+                  inputmode="numeric"
+                /><button
+                  type="button"
+                  data-step="switch-count:1"
+                  aria-label="More switches"
+                >
+                  +
+                </button>
+              </div></label
+            >
+            <label class="size-field" for="rule-count"
+              ><span>Rules</span>
+              <div class="stepper">
+                <button
+                  type="button"
+                  data-step="rule-count:-1"
+                  aria-label="Fewer rules"
+                >
+                  −</button
+                ><input
+                  id="rule-count"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value="10"
+                  required
+                  inputmode="numeric"
+                /><button
+                  type="button"
+                  data-step="rule-count:1"
+                  aria-label="More rules"
+                >
+                  +
+                </button>
+              </div></label
+            >
+            <button class="button secondary" type="submit" id="new-btn">
+              <span aria-hidden="true">↻</span> New rules
+            </button>
+          </form>
+          <div class="algorithm-actions">
+            <button class="button primary" id="solve-btn">
+              <span aria-hidden="true">⌁</span> Find solution</button
+            ><button class="button secondary" id="check-btn">
+              <span aria-hidden="true">✓</span> Check solution
+            </button>
+          </div>
+          <div class="controls-foot">
+            <span id="size-hint"
+              >Minimum 3 switches · 1 rule. Sizes apply with New rules.</span
+            ><button class="text-button small" id="formula-btn">
+              ↗ Import / export</button
+            ><button class="text-button small" id="share-btn">
+              ↗ Share puzzle
+            </button>
+          </div>
+        </section>
+
+        <section class="overview" aria-label="Current problem status">
+          <div class="overview-status">
+            <span id="status-orb" class="status-orb"></span
+            ><strong id="status-title">Keep exploring</strong
+            ><span id="status-text"></span>
+          </div>
+          <div class="satisfaction">
+            <div id="satisfaction-meter" class="meter" aria-hidden="true"></div>
+            <span
+              ><b id="satisfied-count">0</b
+              ><span id="total-count"> / 10</span> rules satisfied</span
+            >
+          </div>
+        </section>
+
+        <section
+          id="walk-panel"
+          class="panel walk-panel"
+          aria-label="Manual walkthrough"
+          hidden
+        >
+          <div class="walk-top">
+            <div class="eyebrow" id="walk-mode">BACKTRACKING · DPLL</div>
+            <div class="walk-tag" id="walk-tag">START</div>
+            <button class="text-button" id="stop-btn">
+              Stop <span aria-hidden="true">×</span>
+            </button>
+          </div>
+          <div class="walk-body">
+            <div class="walk-copy" aria-live="polite">
+              <h2 id="step-title"></h2>
+              <p id="step-detail"></p>
+            </div>
+            <div class="walk-navigation">
+              <button
+                id="prev-btn"
+                class="arrow-button"
+                aria-label="Previous step"
+              >
+                ←</button
+              ><span id="step-count" class="step-count"></span
+              ><button
+                id="next-btn"
+                class="arrow-button"
+                aria-label="Next step"
+              >
+                →
+              </button>
+            </div>
+          </div>
+          <div class="walk-bottom">
+            <span id="walk-stats"></span
+            ><span id="walk-note"
+              >Entirely manual. Use the arrows to explore.</span
+            >
+          </div>
+        </section>
+
+        <div class="workspace-grid">
+          <section class="panel matrix-panel" aria-labelledby="matrix-heading">
+            <div class="panel-heading">
+              <div>
+                <div class="eyebrow panel-eyebrow">
+                  01 <span>THE ASSIGNMENT</span>
+                </div>
+                <h2 id="matrix-heading">
+                  Rule matrix <span class="live-badge"><i></i> LIVE</span>
+                </h2>
+              </div>
+              <button
+                class="sort-button"
+                id="sort-btn"
+                aria-label="Order columns: original order. Switch to most conditions first."
+              >
+                <span aria-hidden="true">⇅</span
+                ><span id="sort-label">Original order</span>
+              </button>
+            </div>
+            <div class="panel-description">
+              Tap a switch to flip it. Each row needs at least one
+              <span class="inline-match">✓</span>.
+            </div>
+            <div class="filter-bar" id="filter-bar" hidden>
+              <span id="filter-text"></span
+              ><button id="clear-filter" class="text-button small">
+                Clear ×
+              </button>
+            </div>
+            <div
+              id="table-scroll"
+              class="table-scroll"
+              tabindex="0"
+              role="region"
+              aria-label="Interactive rule table. Scroll horizontally for more switches."
+            >
+              <table id="matrix">
+                <caption class="sr-only">
+                  Rules are rows; switches are columns. Each occupied cell is a
+                  required state and whether it matches the current switch.
+                </caption>
+                <thead id="table-head"></thead>
+                <tbody id="table-body"></tbody>
+              </table>
+            </div>
+            <div class="panel-foot matrix-foot">
+              <span
+                ><i class="key-dot on"></i> ON <i class="key-dot off"></i> OFF
+                <span class="unknown-key">?</span> Undecided</span
+              ><span
+                >Tap a condition to group its rules
+                <span aria-hidden="true">↗</span></span
+              >
+            </div>
+          </section>
+
+          <section
+            class="panel network-panel"
+            aria-labelledby="network-heading"
+          >
+            <div class="panel-heading">
+              <div>
+                <div class="eyebrow panel-eyebrow">
+                  02 <span>THE CONNECTIONS</span>
+                </div>
+                <h2 id="network-heading">Condition network</h2>
+              </div>
+              <button
+                id="physics-btn"
+                class="physics-button"
+                aria-pressed="true"
+              >
+                <i></i><span>Physics on</span>
+              </button>
+            </div>
+            <div class="panel-description">
+              One node per condition. Same rule, same color.
+              <span class="network-signs">A+ = ON · A− = OFF</span>
+            </div>
+            <div class="network-viewport" id="network-viewport">
+              <canvas
+                id="network"
+                tabindex="0"
+                role="img"
+                aria-label="Interactive 3D condition network. Drag a node to move it, drag the background to rotate, pinch or scroll to zoom. Arrow keys rotate, plus and minus zoom, Home resets."
+              ></canvas>
+              <div class="network-label">
+                <span class="dot"></span
+                ><span id="network-summary">30 conditions · 10 rules</span>
+              </div>
+              <div class="network-tools">
+                <button id="zoom-in" class="icon-button" aria-label="Zoom in">
+                  +</button
+                ><button
+                  id="zoom-out"
+                  class="icon-button"
+                  aria-label="Zoom out"
+                >
+                  −</button
+                ><span></span
+                ><button
+                  id="fit-btn"
+                  class="icon-button"
+                  aria-label="Fit network to view"
+                >
+                  ⌗
+                </button>
+              </div>
+              <div class="node-tooltip" id="node-tooltip" hidden></div>
+              <div class="network-hint">
+                <span>↔ Drag nodes</span><span>⟳ Rotate space</span
+                ><span>⊕ Pinch to zoom</span>
+              </div>
+            </div>
+            <div class="panel-foot network-foot">
+              <span><i class="line-key rule-line"></i> Same rule</span
+              ><span
+                ><i class="line-key identical-line"></i> Identical
+                condition</span
+              ><span class="depth-hint">3D · touch to explore</span>
+            </div>
+          </section>
+        </div>
+
+        <section class="explainer-grid">
+          <div class="explainer-card">
+            <span class="explainer-icon">∨</span>
+            <div>
+              <h3>A little OR. A lot of AND.</h3>
+              <p>
+                Any one condition can satisfy a rule. A solution satisfies
+                <em>all</em> the rules at once.
+              </p>
+            </div>
+          </div>
+          <div class="explainer-card">
+            <span class="explainer-icon">↶</span>
+            <div>
+              <h3>Watch the reasoning unfold.</h3>
+              <p>
+                The solver decides, follows forced moves, and backtracks at dead
+                ends. You control every step.
+              </p>
+            </div>
+          </div>
+          <div class="explainer-card">
+            <span class="explainer-icon">⌘</span>
+            <div>
+              <h3>Two views. One problem.</h3>
+              <p>
+                The table and network stay in sync. Reorder, drag, or zoom
+                without losing your place.
+              </p>
+            </div>
+          </div>
+        </section>
+        <footer>
+          <span
+            >P / NP <span class="footer-divider">/</span> An open-ended space
+            for curious minds.</span
+          ><span
+            >Experiment, observe, question.
+            <button class="text-button small" id="about-btn">
+              About 3-SAT ↗
+            </button></span
+          >
+        </footer>
+      </main>
+    </div>
+    <dialog id="help-dialog">
+      <div class="dialog-head">
+        <div class="eyebrow">A SMALL GUIDE TO BIG QUESTIONS</div>
+        <button
+          class="icon-button"
+          data-close="help-dialog"
+          aria-label="Close guide"
+        >
+          ×
+        </button>
+      </div>
+      <h2>Make every rule click.</h2>
+      <p>
+        A switch is either ON or OFF. Each rule contains three conditions
+        connected by <strong>OR</strong>. At least one must match. The rules are
+        connected by <strong>AND</strong>: they must all pass.
+      </p>
+      <div class="help-example">
+        <span>A ON ✓</span><span>∨</span><span>B OFF ×</span><span>∨</span
+        ><span>C ON ×</span><strong>→ Rule passes</strong>
+      </div>
+      <h3>Your lab, your pace</h3>
+      <ul>
+        <li>
+          Tap table headers to toggle switches; tap conditions to group
+          identical literals.
+        </li>
+        <li>
+          <strong>Find solution</strong> starts a fresh DPLL search with
+          undecided switches. Decisions explore OFF first, unit propagation
+          makes forced moves, and conflicts trigger backtracking.
+        </li>
+        <li>
+          <strong>Check solution</strong> visits every rule without changing any
+          switch.
+        </li>
+        <li>
+          Both walkthroughs advance only when you press →. ← restores the
+          earlier assignment and explanation. Stop restores your starting
+          settings during search; at a solved final step it keeps the solution.
+        </li>
+        <li>
+          Drag network nodes, drag empty space to rotate, and pinch or scroll to
+          zoom. Use Shift + drag to pan. Node fills show ON/OFF requirements;
+          their colored outlines identify rules.
+        </li>
+        <li>
+          Import or export standard DIMACS CNF to study your own formulas.
+          Generated formulas are always satisfiable; imported ones may be
+          unsatisfiable.
+        </li>
+      </ul>
+      <h3>Why P / NP?</h3>
+      <p>
+        3-SAT is NP-complete. Checking an assignment is quick; finding one can
+        involve many branches. This is a tool for experiments and intuition. The
+        DPLL solver is an exponential-time search in the worst case, not a proof
+        that P = NP or P ≠ NP. Success on generated instances does not establish
+        a general complexity result.
+      </p>
+      <p class="muted">
+        Everything runs in your browser. Your current problem is saved on this
+        device; shared links include the formula and switch settings.
+      </p>
+      <button class="button primary" data-close="help-dialog">
+        Let’s explore ↗
+      </button>
+    </dialog>
+    <dialog id="formula-dialog">
+      <div class="dialog-head">
+        <div class="eyebrow">BRING YOUR OWN PROBLEM</div>
+        <button
+          class="icon-button"
+          data-close="formula-dialog"
+          aria-label="Close formula editor"
+        >
+          ×
+        </button>
+      </div>
+      <h2>The formula workbench.</h2>
+      <p>
+        Standard DIMACS CNF. Use exactly three distinct switches per rule;
+        positive numbers require ON, negative numbers require OFF. You can also
+        load a saved JSON puzzle.
+      </p>
+      <label class="textarea-label" for="formula-input"
+        >Formula
+        <button id="open-file" class="text-button small">
+          Open a file ↗
+        </button></label
+      ><input
+        id="formula-file"
+        type="file"
+        accept=".cnf,.dimacs,.txt,.json,text/plain,application/json"
+        hidden
+      /><textarea id="formula-input" spellcheck="false" rows="10"></textarea>
+      <p id="formula-error" class="error-message" role="alert"></p>
+      <div class="dialog-actions">
+        <button class="button primary" id="load-formula">Load formula</button
+        ><button class="button secondary" id="download-formula">
+          Export .cnf</button
+        ><button class="button secondary" id="copy-formula">Copy</button>
+      </div>
+      <div class="example-actions">
+        <span>Try an example:</span
+        ><button class="text-button small" id="unsat-example">
+          Unsatisfiable · 3 switches / 8 rules ↗
+        </button>
+      </div>
+    </dialog>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </body>
+</html>
