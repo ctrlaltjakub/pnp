@@ -337,6 +337,16 @@
             >
               <span class="layers-label">Show</span>
               <button
+                id="grid-btn"
+                class="layer-button"
+                data-layer="grid"
+                type="button"
+                aria-pressed="true"
+                hidden
+              >
+                Grid plane
+              </button>
+              <button
                 class="layer-button"
                 data-layer="nodes"
                 type="button"
@@ -531,8 +541,9 @@
           zoom. Use Shift + drag to pan. Node fills show ON/OFF requirements;
           their colored outlines identify rules. Turn on Fabric to spread the
           net into an elastic sheet. Pull a node to stretch its connections;
-          release it to let the fabric settle. Lift matches raises fulfilled
-          conditions above the sheet, following the current settings and
+          release it to let the fabric settle onto the grid plane. Lift matches
+          raises fulfilled conditions by about one node diameter. Small guides
+          show their height above the plane, following the current settings and
           walkthrough step. The Show buttons hide individual visual layers. Red
           dotted links join opposite requirements for the same switch; their
           presence alone does not mean the whole formula is unsatisfiable.

@@ -93,11 +93,13 @@ test("UI completes both manual walkthroughs, preserves sorting, imports UNSAT, a
     );
     assert.equal(JSON.stringify(view().step), snapshot);
     assert.equal($("fabric-btn").getAttribute("aria-checked"), "false");
+    assert.equal($("grid-btn").hidden, true);
     click("fabric-btn");
     assert.equal($("fabric-btn").getAttribute("aria-checked"), "true");
     assert.equal(JSON.stringify(view().step), snapshot);
     assert.ok($("fabric-description").textContent.includes("stretch"));
     assert.equal($("lift-btn").hidden, false);
+    assert.equal($("grid-btn").hidden, false);
     click("lift-btn");
     assert.equal($("lift-btn").getAttribute("aria-pressed"), "true");
     assert.equal(JSON.stringify(view().step), snapshot);
@@ -108,6 +110,7 @@ test("UI completes both manual walkthroughs, preserves sorting, imports UNSAT, a
       "rule",
       "same",
       "contradictions",
+      "grid",
     ]) {
       const button = w.document.querySelector(`[data-layer="${layer}"]`);
       button.click();

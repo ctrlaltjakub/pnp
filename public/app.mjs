@@ -489,15 +489,17 @@ $("physics-btn").addEventListener("click", () => {
   updateFabricControls();
 });
 function updateFabricControls() {
+  $("network-viewport").classList.toggle("fabric-view", network.fabric);
+  $("grid-btn").hidden = !network.fabric;
   $("lift-btn").hidden = !network.fabric;
   $("lift-btn").setAttribute("aria-pressed", String(network.liftMatches));
   $("lift-btn").title = network.liftMatches
     ? "Lower matching conditions back onto the sheet"
-    : "Raise matching conditions above the sheet";
+    : "Raise matching conditions about one node diameter above the grid";
   $("fabric-btn").setAttribute("aria-checked", String(network.fabric));
   $("fabric-description").textContent = network.fabric
     ? network.running
-      ? "Drag to stretch. Release to settle."
+      ? "Drag to stretch. Settle onto the grid."
       : "Physics paused. Drag to reshape."
     : "Spread into a flexible sheet";
   $("network-mode-label").textContent = network.fabric

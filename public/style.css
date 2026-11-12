@@ -1026,6 +1026,9 @@ h2 {
   touch-action: none;
   cursor: grab;
 }
+.network-viewport.fabric-view {
+  background-image: none;
+}
 .network-viewport canvas:active {
   cursor: grabbing;
 }

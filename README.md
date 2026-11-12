@@ -29,9 +29,9 @@ Turn on **Fabric** to spread each connected net into a flat sheet of triangular 
 
 Red dotted links connect every opposite-polarity occurrence of the same switch (for example A ON ↔ A OFF), independent of the current assignment. They are visual relationships, so they do not change the spring system. Contradicting individual requirements do not by themselves make a formula unsatisfiable. These links are stored as groups of occurrences to avoid allocating a quadratic list of pairs.
 
-The **Show** buttons independently toggle nodes, labels, rule fills, rule links, identical-condition links, and contradictions. Visibility preferences persist on this device and across new problems. Hidden nodes cannot be selected or dragged; visibility changes preserve physics, layout, and walkthrough progress.
+The **Show** buttons independently toggle nodes, labels, rule fills, rule links, identical-condition links, and contradictions, plus the grid plane in Fabric view. Visibility preferences persist on this device and across new problems. Hidden nodes cannot be selected or dragged; visibility changes preserve physics, layout, and walkthrough progress.
 
-In Fabric view, **Lift matches** raises the currently fulfilled conditions above the sheet and tilts the view to make their height visible. Unfulfilled and undecided conditions stay on the base plane. Heights follow the displayed assignment during manual edits and walkthroughs, including when physics is paused. With physics running, springs smoothly approach the target heights.
+In Fabric view, the sheet settles toward a grid at zero height. The grid rotates and zooms with the network; small guides connect raised nodes to their positions on the plane. **Lift matches** raises the currently fulfilled conditions by roughly one node diameter and tilts the view to make their height visible. Unfulfilled and undecided conditions stay on the base plane. Heights follow the displayed assignment during manual edits and walkthroughs, including when physics is paused. With physics running, springs smoothly approach the target heights.
 
 ## Formula workbench and persistence
 

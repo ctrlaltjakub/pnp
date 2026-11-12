@@ -281,7 +281,7 @@ test("network models both connection dimensions, separates components, and suppo
     for (let i = 0; i < 700; i++) net.tick();
     for (const p of net.nodes)
       assert.ok(
-        Math.abs(p.z - (values[p.l.v] === p.l.on ? 80 : 0)) < 1,
+        Math.abs(p.z - (values[p.l.v] === p.l.on ? 32 : 0)) < 1,
         "fulfilled conditions rise while others remain level",
       );
     net.running = false;
@@ -290,9 +290,46 @@ test("network models both connection dimensions, separates components, and suppo
     for (const p of net.nodes)
       assert.equal(
         p.z,
-        values[p.l.v] === p.l.on ? 80 : 0,
+        values[p.l.v] === p.l.on ? 32 : 0,
         "paused heights follow in-place assignment changes",
       );
+    const liftedPose = net.nodes.map(({ x, y, z }) => ({ x, y, z }));
+    let path = [],
+      gridPaths = [];
+    context.beginPath = () => {
+      path = [];
+    };
+    context.moveTo = context.lineTo = (x, y) => path.push([x, y]);
+    context.stroke = () => {
+      if (context.strokeStyle === net.palette.grid) gridPaths.push([...path]);
+    };
+    net.draw();
+    assert.ok(gridPaths.length > 0, "Fabric draws a reference plane");
+    assert.ok(gridPaths.flat(2).every(Number.isFinite));
+    const originalGrid = gridPaths;
+    gridPaths = [];
+    net.rotation.x += 0.4;
+    net.draw();
+    assert.notDeepEqual(
+      gridPaths,
+      originalGrid,
+      "grid rotates with the fabric",
+    );
+    net.setLayer("grid", false);
+    gridPaths = [];
+    net.draw();
+    assert.equal(gridPaths.length, 0, "the grid can be hidden independently");
+    assert.deepEqual(
+      net.nodes.map(({ x, y, z }) => ({ x, y, z })),
+      liftedPose,
+      "grid visibility and rotation leave heights and physics unchanged",
+    );
+    net.setLayer("grid", true);
+    net.setFabric(false);
+    gridPaths = [];
+    net.draw();
+    assert.equal(gridPaths.length, 0, "normal 3D mode has no fabric plane");
+    net.setFabric(true);
     net.update({ values: Array(5).fill(null) });
     assert.ok(
       net.nodes.every((p) => p.z === 0),

@@ -1,11 +1,16 @@
 import { nameOf, conditionKey } from "./engine.mjs";
 const SPACE_SPACING = 1.6;
+const NODE_RADIUS = 16;
+const FABRIC_LIFT = NODE_RADIUS * 2;
 export const ruleColor = (i) =>
   `hsl(${[18, 88, 198, 278, 43, 161, 326, 224, 115, 5][i % 10] + Math.floor(i / 10) * 137.508} 36% 58%)`;
 const palettes = {
   light: {
     same: "#7f8870",
     contradiction: "#c53d45",
+    plane: "#e6ecde",
+    grid: "#879780",
+    heightGuide: "#718b60",
     selected: "#a58c4f",
     shadow: "#55604410",
     unknown: "#eeeee5",
@@ -21,6 +26,9 @@ const palettes = {
   dark: {
     same: "#b4bfa3",
     contradiction: "#f4777b",
+    plane: "#24342d",
+    grid: "#8aab97",
+    heightGuide: "#afca91",
     selected: "#e4c780",
     shadow: "#00000030",
     unknown: "#2b322e",
@@ -53,6 +61,7 @@ export class ConditionNetwork {
       same: true,
       contradictions: true,
       fills: true,
+      grid: true,
     };
     this.values = [];
     this.heightAssignment = [];
@@ -330,7 +339,7 @@ export class ConditionNetwork {
     return this.fabric &&
       this.liftMatches &&
       this.values[node.l.v] === node.l.on
-      ? 80
+      ? FABRIC_LIFT
       : 0;
   }
   syncFabricHeights(snap = false) {
@@ -528,12 +537,128 @@ export class ConditionNetwork {
       scale,
     };
   }
+  nodeRadius(scale) {
+    return Math.min(
+      23,
+      Math.max(this.nodes.length > 800 ? 3 : 9, NODE_RADIUS * Math.sqrt(scale)),
+    );
+  }
+  drawFabricPlane() {
+    if (!this.fabric || !this.layers.grid || !this.nodes.length) return;
+    const ctx = this.ctx;
+    const colors = this.palette;
+    let left = Infinity,
+      right = -Infinity,
+      top = Infinity,
+      bottom = -Infinity;
+    for (const p of this.nodes) {
+      left = Math.min(left, p.x, p.fabricHome.x);
+      right = Math.max(right, p.x, p.fabricHome.x);
+      top = Math.min(top, p.y, p.fabricHome.y);
+      bottom = Math.max(bottom, p.y, p.fabricHome.y);
+    }
+    // Keep a stable world-space lattice; coarsen it for large or zoomed-out nets.
+    const spacing =
+      40 *
+      2 **
+        Math.max(
+          0,
+          Math.ceil(
+            Math.log2(
+              Math.max(
+                1,
+                14 / (this.baseScale * this.zoom * 40),
+                (right - left) / 2400,
+                (bottom - top) / 2400,
+              ),
+            ),
+          ),
+        );
+    left = Math.floor((left - 48) / spacing) * spacing;
+    right = Math.ceil((right + 48) / spacing) * spacing;
+    top = Math.floor((top - 48) / spacing) * spacing;
+    bottom = Math.ceil((bottom + 48) / spacing) * spacing;
+    const corners = [
+      [left, top],
+      [right, top],
+      [right, bottom],
+      [left, bottom],
+    ];
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    corners.forEach(([x, y], i) => {
+      const s = this.project({ x, y, z: 0 });
+      if (i) ctx.lineTo(s.x, s.y);
+      else ctx.moveTo(s.x, s.y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = colors.plane;
+    ctx.globalAlpha = 0.65;
+    ctx.fill();
+    ctx.strokeStyle = colors.grid;
+    ctx.globalAlpha = 0.4;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    for (const major of [false, true]) {
+      ctx.beginPath();
+      const line = (x1, y1, x2, y2) => {
+        const a = this.project({ x: x1, y: y1, z: 0 });
+        const b = this.project({ x: x2, y: y2, z: 0 });
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+      };
+      for (let x = left; x <= right; x += spacing)
+        if ((Math.round(x / spacing) % 4 === 0) === major)
+          line(x, top, x, bottom);
+      for (let y = top; y <= bottom; y += spacing)
+        if ((Math.round(y / spacing) % 4 === 0) === major)
+          line(left, y, right, y);
+      ctx.globalAlpha = major ? 0.32 : 0.16;
+      ctx.stroke();
+    }
+    if (this.layers.nodes) {
+      ctx.strokeStyle = colors.heightGuide;
+      for (const p of this.nodes) {
+        if (Math.abs(p.z) < 2) continue;
+        const foot = this.project({ x: p.x, y: p.y, z: 0 });
+        const fade =
+          this.activeLiteral && p.key !== this.activeLiteral ? 0.2 : 1;
+        ctx.globalAlpha = 0.5 * fade;
+        ctx.beginPath();
+        ctx.moveTo(foot.x, foot.y);
+        ctx.lineTo(p.screen.x, p.screen.y);
+        ctx.stroke();
+        // A footprint on the plane remains visible even when a short height
+        // guide is partly covered by the node itself.
+        const radius = this.nodeRadius(foot.scale) / foot.scale;
+        ctx.beginPath();
+        for (let i = 0; i < 16; i++) {
+          const angle = (i / 16) * Math.PI * 2;
+          const s = this.project({
+            x: p.x + Math.cos(angle) * radius,
+            y: p.y + Math.sin(angle) * radius,
+            z: 0,
+          });
+          if (i) ctx.lineTo(s.x, s.y);
+          else ctx.moveTo(s.x, s.y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = colors.heightGuide;
+        ctx.globalAlpha = 0.12 * fade;
+        ctx.fill();
+        ctx.globalAlpha = 0.35 * fade;
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
   draw() {
     const ctx = this.ctx;
     const colors = this.palette;
     if (!ctx || !this.width) return;
     ctx.clearRect(0, 0, this.width, this.height);
     for (const p of this.nodes) p.screen = this.project(p);
+    this.drawFabricPlane();
     const fadeFor = (p) =>
       this.activeLiteral && p.key !== this.activeLiteral ? 0.2 : 1;
     if (this.layers.fills)
@@ -622,10 +747,7 @@ export class ConditionNetwork {
         s.y > this.height + 30
       )
         continue;
-      const radius = Math.min(
-        23,
-        Math.max(this.nodes.length > 800 ? 3 : 9, 16 * Math.sqrt(s.scale)),
-      );
+      const radius = this.nodeRadius(s.scale);
       p.radius = radius;
       const selected = this.activeLiteral === p.key,
         active = this.activeRule === p.rule,
