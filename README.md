@@ -4,6 +4,8 @@ A phone-friendly, interactive 3-SAT laboratory. Flip switches in a rule matrix, 
 
 Live: **https://pnp.jakub.computer**
 
+Dark mode is the default. The sun/moon button in the header switches themes and remembers your choice on this device, including the network canvas. Changing themes preserves the current puzzle, walkthrough, and network layout.
+
 ## Use it
 
 - Defaults to 6 switches and 10 rules. Counts are independent, with minima of 3 and 1 and no arbitrary application maximum. Practical capacity depends on browser memory and device speed.

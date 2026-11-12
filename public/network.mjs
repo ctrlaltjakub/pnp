@@ -1,6 +1,36 @@
 import { nameOf, conditionKey } from "./engine.mjs";
 export const ruleColor = (i) =>
   `hsl(${[18, 88, 198, 278, 43, 161, 326, 224, 115, 5][i % 10] + Math.floor(i / 10) * 137.508} 36% 58%)`;
+const palettes = {
+  light: {
+    same: "#7f8870",
+    selected: "#a58c4f",
+    shadow: "#55604410",
+    unknown: "#eeeee5",
+    on: "#edf3df",
+    off: "#f8e4da",
+    onText: "#526f43",
+    offText: "#a46954",
+    unknownBadge: "#b3b6a4",
+    matchBadge: "#91a77c",
+    missBadge: "#d1a08e",
+    badgeText: "#fffef8",
+  },
+  dark: {
+    same: "#b4bfa3",
+    selected: "#e4c780",
+    shadow: "#00000030",
+    unknown: "#2b322e",
+    on: "#2b3c2a",
+    off: "#402d26",
+    onText: "#c0d5a4",
+    offText: "#edb9a1",
+    unknownBadge: "#9ba991",
+    matchBadge: "#abc789",
+    missBadge: "#daa48d",
+    badgeText: "#151d17",
+  },
+};
 
 // A small 3D spring system. Graph construction is independent of table order.
 export class ConditionNetwork {
@@ -21,6 +51,8 @@ export class ConditionNetwork {
     this.baseScale = 1;
     this.running = !matchMedia("(prefers-reduced-motion: reduce)").matches;
     this.fabric = false;
+    this.theme = "dark";
+    this.palette = palettes.dark;
     this.pointers = new Map();
     this.drag = null;
     this.width = 0;
@@ -259,6 +291,11 @@ export class ConditionNetwork {
     this.activeLiteral = literal;
     this.activeVariable = variable;
   }
+  setTheme(theme) {
+    this.theme = theme === "light" ? "light" : "dark";
+    this.palette = palettes[this.theme];
+    this.draw();
+  }
   resize() {
     const rect = this.canvas.parentElement.getBoundingClientRect();
     this.width = rect.width;
@@ -402,6 +439,7 @@ export class ConditionNetwork {
   }
   draw() {
     const ctx = this.ctx;
+    const colors = this.palette;
     if (!ctx || !this.width) return;
     ctx.clearRect(0, 0, this.width, this.height);
     for (const p of this.nodes) p.screen = this.project(p);
@@ -427,11 +465,11 @@ export class ConditionNetwork {
       ctx.beginPath();
       ctx.moveTo(a.x, a.y);
       ctx.lineTo(b.x, b.y);
-      ctx.strokeStyle = e.kind === "same" ? "#7f8870" : e.color;
+      ctx.strokeStyle = e.kind === "same" ? colors.same : e.color;
       ctx.lineWidth = active ? 2.3 : e.kind === "same" ? 1.5 : 1.4;
       ctx.setLineDash(e.kind === "same" ? [3, 5] : []);
       ctx.globalAlpha =
-        (e.kind === "same" ? 0.85 : 0.65) *
+        (e.kind === "same" ? 0.85 : this.theme === "dark" ? 0.8 : 0.65) *
         Math.max(fadeFor(e.a), fadeFor(e.b));
       if (active) ctx.globalAlpha = 1;
       ctx.stroke();
@@ -441,7 +479,12 @@ export class ConditionNetwork {
       for (const t of this.triangles) {
         const x = t.nodes.reduce((s, p) => s + p.screen.x, 0) / 3,
           y = t.nodes.reduce((s, p) => s + p.screen.y, 0) / 3;
-        ctx.globalAlpha = this.activeRule === t.rule ? 0.85 : 0.45;
+        ctx.globalAlpha =
+          this.activeRule === t.rule
+            ? 0.85
+            : this.theme === "dark"
+              ? 0.7
+              : 0.45;
         ctx.fillStyle = t.color;
         ctx.font = '9px "IBM Plex Mono",monospace';
         ctx.textAlign = "center";
@@ -469,16 +512,20 @@ export class ConditionNetwork {
       if (active || selected || this.activeVariable === p.l.v) {
         ctx.beginPath();
         ctx.arc(s.x, s.y, radius + 4, 0, Math.PI * 2);
-        ctx.strokeStyle = selected ? "#a58c4f" : p.color;
+        ctx.strokeStyle = selected ? colors.selected : p.color;
         ctx.lineWidth = 1.5;
         ctx.stroke();
       }
-      ctx.shadowColor = "#55604410";
+      ctx.shadowColor = colors.shadow;
       ctx.shadowBlur = 5;
       ctx.shadowOffsetY = 2;
       ctx.beginPath();
       ctx.arc(s.x, s.y, radius, 0, Math.PI * 2);
-      ctx.fillStyle = unknown ? "#eeeee5" : p.l.on ? "#edf3df" : "#f8e4da";
+      ctx.fillStyle = unknown
+        ? colors.unknown
+        : p.l.on
+          ? colors.on
+          : colors.off;
       ctx.fill();
       ctx.shadowBlur = 0;
       ctx.shadowOffsetY = 0;
@@ -488,16 +535,20 @@ export class ConditionNetwork {
       if (radius >= 8) {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillStyle = p.l.on ? "#526f43" : "#a46954";
+        ctx.fillStyle = p.l.on ? colors.onText : colors.offText;
         ctx.font = `500 ${Math.max(8, Math.min(11, radius * 0.7))}px "IBM Plex Mono",monospace`;
         ctx.fillText(`${nameOf(p.l.v)}${p.l.on ? "+" : "−"}`, s.x, s.y - 0.6);
         const bx = s.x + radius * 0.72,
           by = s.y + radius * 0.72;
         ctx.beginPath();
         ctx.arc(bx, by, 4.7, 0, Math.PI * 2);
-        ctx.fillStyle = unknown ? "#b3b6a4" : match ? "#91a77c" : "#d1a08e";
+        ctx.fillStyle = unknown
+          ? colors.unknownBadge
+          : match
+            ? colors.matchBadge
+            : colors.missBadge;
         ctx.fill();
-        ctx.fillStyle = "#fffef8";
+        ctx.fillStyle = colors.badgeText;
         ctx.font = "bold 7px sans-serif";
         ctx.fillText(unknown ? "?" : match ? "✓" : "×", bx, by + 0.3);
       }

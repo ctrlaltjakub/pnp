@@ -6,7 +6,7 @@
   "description": "An interactive 3-SAT laboratory with a manual DPLL solver and a physics-based condition network.",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check public/app.mjs && node --check public/network.mjs && node --check public/engine.mjs"
+    "check": "node --check public/app.mjs && node --check public/network.mjs && node --check public/engine.mjs && node --check public/theme.js"
   },
   "engines": {
     "node": ">=22"

@@ -1,9 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f6f5f0" />
+    <meta name="theme-color" content="#121817" />
+    <script src="/theme.js"></script>
     <meta
       name="description"
       content="Explore 3-SAT, one switch at a time. A hands-on logic lab with a manual backtracking solver and a living, physics-based condition network."
@@ -28,8 +29,28 @@
         <div class="header-actions">
           <span class="local-label"
             ><span class="dot"></span> Your own little universe of logic</span
-          ><button class="text-button" id="help-btn">
-            <span class="help-circle">?</span> How it works</button
+          ><button class="text-button" id="help-btn" aria-label="How it works">
+            <span class="help-circle">?</span
+            ><span class="help-label">How it works</span>
+          </button>
+          <button
+            id="theme-btn"
+            class="icon-button theme-button"
+            type="button"
+            aria-label="Switch to light mode"
+            title="Switch to light mode"
+          >
+            <svg class="theme-sun" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" />
+              <path
+                d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"
+              />
+            </svg>
+            <svg class="theme-moon" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M20.5 14a8.5 8.5 0 0 1-10.5-10.5A8.5 8.5 0 1 0 20.5 14Z"
+              />
+            </svg></button
           ><a
             class="icon-button github-link"
             href="https://github.com/ctrlaltjakub/pnp"

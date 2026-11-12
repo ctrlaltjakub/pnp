@@ -58,6 +58,30 @@ const network = new ConditionNetwork($("network"), {
     }
   },
 });
+function applyTheme(theme, savePreference = false) {
+  document.documentElement.dataset.theme = theme;
+  document.querySelector('meta[name="theme-color"]').content =
+    theme === "dark" ? "#121817" : "#f6f5f0";
+  const label =
+    theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
+  $("theme-btn").setAttribute("aria-label", label);
+  $("theme-btn").title = label;
+  network.setTheme(theme);
+  if (savePreference) {
+    try {
+      localStorage.setItem("pnp-theme", theme);
+    } catch {}
+  }
+}
+applyTheme(
+  document.documentElement.dataset.theme === "light" ? "light" : "dark",
+);
+$("theme-btn").addEventListener("click", () =>
+  applyTheme(
+    document.documentElement.dataset.theme === "dark" ? "light" : "dark",
+    true,
+  ),
+);
 // Public panel API: subscribe to the same displayed assignment as existing panels.
 // No hidden generator assignment is stored or exposed anywhere.
 window.pnp = Object.freeze({
