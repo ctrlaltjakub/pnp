@@ -897,8 +897,8 @@ h2 {
 .network-tools .icon-button {
   border: 0;
   background: none;
-  width: 34px;
-  height: 35px;
+  width: 44px;
+  height: 44px;
   font-size: 21px;
 }
 .network-tools > span {
@@ -1874,6 +1874,16 @@ textarea {
 @media (max-width: 620px) {
   .condition {
     min-height: 44px;
+    font-size: 10px;
+  }
+  .rule-id {
+    font-size: 10px;
+  }
+  .row-count {
+    font-size: 9px;
+  }
+  .switch-state {
+    font-size: 9px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

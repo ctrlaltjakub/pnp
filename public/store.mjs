@@ -36,6 +36,7 @@ export class PlaygroundStore {
     };
   }
   get columns() {
+    if (this.columnCache) return this.columnCache;
     const list = Array.from({ length: this.problem.n }, (_, i) => i);
     if (this.order !== 0)
       list.sort(
@@ -43,14 +44,17 @@ export class PlaygroundStore {
           (this.occurrences[b] - this.occurrences[a]) *
             (this.order === 1 ? 1 : -1) || a - b,
       );
+    this.columnCache = list;
     return list;
   }
   get rows() {
     if (!this.literal) return this.problem.rules;
+    if (this.rowCache) return this.rowCache;
     const has = (r) => r.lits.some((l) => conditionKey(l) === this.literal);
-    return this.problem.rules
+    this.rowCache = this.problem.rules
       .filter(has)
       .concat(this.problem.rules.filter((r) => !has(r)));
+    return this.rowCache;
   }
   load(problem, notify = true) {
     validateProblem(problem);
@@ -67,6 +71,8 @@ export class PlaygroundStore {
     this.mode = null;
     this.order = 0;
     this.literal = null;
+    this.columnCache = null;
+    this.rowCache = null;
     if (notify) this.emit("problem");
   }
   toggle(v) {
@@ -77,11 +83,13 @@ export class PlaygroundStore {
   }
   cycleOrder() {
     this.order = (this.order + 1) % 3;
+    this.columnCache = null;
     this.emit("order");
   }
   focusCondition(l) {
     const key = l ? conditionKey(l) : null;
     this.literal = key === this.literal ? null : key;
+    this.rowCache = null;
     this.emit("order");
   }
   start(mode) {
@@ -112,7 +120,8 @@ export class PlaygroundStore {
     if (notify) this.emit("values");
   }
   summary() {
-    const states = this.problem.rules.map((r) => evaluate(r, this.view.values));
+    const values = this.walk?.current.values || this.problem.values;
+    const states = this.problem.rules.map((r) => evaluate(r, values));
     return {
       passed: states.filter((e) => e.status === "pass").length,
       failed: states.filter((e) => e.status === "fail").length,

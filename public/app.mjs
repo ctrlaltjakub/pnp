@@ -206,16 +206,15 @@ function renderWalk() {
   );
   $("prev-btn").disabled = v.walk.index === 0;
   $("next-btn").disabled = !!s.done;
-  $("stop-btn").innerHTML =
-    s.type === "solved"
-      ? 'Keep solution <span aria-hidden="true">✓</span>'
-      : 'Stop <span aria-hidden="true">×</span>';
+  $("stop-btn").innerHTML = 'Stop <span aria-hidden="true">×</span>';
   $("walk-stats").textContent =
     v.mode === "solve"
       ? `${s.decisions} decisions · ${s.forced} forced · ${s.backtracks} backtracks · depth ${s.depth || 0}`
       : `${s.checked || 0} checked · ${s.passed || 0} passed · ${v.problem.rules.length} total`;
   $("walk-note").textContent = s.done
-    ? "Walkthrough complete. Go backward to revisit any step."
+    ? s.type === "solved"
+      ? "Stop keeps this solution. Go backward to revisit any step."
+      : "Walkthrough complete. Go backward to revisit any step."
     : "Entirely manual. Use ← / → to explore.";
 }
 function renderOverview() {
@@ -320,8 +319,13 @@ tableContainer.addEventListener("click", (e) => {
       .querySelector(`[data-switch="${v}"]`)
       ?.focus({ preventScroll: true });
   } else if (button.dataset.condition) {
+    const rule = button.closest("[data-rule]").dataset.rule;
+    const condition = button.dataset.condition;
     const [v, on] = button.dataset.condition.split(":").map(Number);
     store.focusCondition({ v, on: !!on });
+    tableContainer
+      .querySelector(`[data-rule="${rule}"] [data-condition="${condition}"]`)
+      ?.focus({ preventScroll: true });
   }
 });
 $("sort-btn").addEventListener("click", () => store.cycleOrder());
